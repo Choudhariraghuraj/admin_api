@@ -22,7 +22,7 @@ app.use("/api/auth", auth_routes_1.default);
 app.use("/api/users", user_routes_1.default);
 mongoose_1.default.connect(process.env.MONGO_URI).then(() => {
     console.log("✅ MongoDB connected");
-    server.listen(5000, () => console.log("🚀 Server running on port 5000"));
+    server.listen(process.env.PORT || 5001, () => console.log("🚀 Server running on port 5001"));
 });
 io.on("connection", (socket) => {
     console.log("🟢 Socket connected:", socket.id);
