@@ -23,7 +23,7 @@ app.use("/api/users", userRoutes);
 
 mongoose.connect(process.env.MONGO_URI!).then(() => {
   console.log("✅ MongoDB connected");
-  server.listen(5001, () => console.log("🚀 Server running on port 5001"));
+  server.listen(process.env.PORT || 5001, () => console.log("🚀 Server running on port 5001"));
 });
 
 io.on("connection", (socket) => {
