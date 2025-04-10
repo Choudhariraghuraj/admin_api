@@ -3,9 +3,12 @@ import {
   getAllUsers,
   getCurrentUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  getProfile,
+  updateProfile
 } from "../controllers/user.controller";
 import { protect } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -16,5 +19,7 @@ router.get("/", getAllUsers);
 router.get("/me", getCurrentUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
+router.get("/me", protect, getProfile);
+router.put("/me", protect, upload.single("avatar"), updateProfile);
 
 export default router;

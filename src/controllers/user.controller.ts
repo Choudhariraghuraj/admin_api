@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import { User } from "../models/user.model";
+import User from "../models/user.model";
+import bcrypt from "bcryptjs";
+import path from "path";
 
 // GET /api/users
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -32,4 +34,43 @@ export const deleteUser = async (req: Request, res: Response) => {
   if (!deleted) return res.status(404).json({ message: "User not found" });
 
   res.json({ message: "User deleted" });
+};
+
+export const getProfile = async (req: any, res: Response) => {
+  const user = await User.findById(req.user.id).select("-password");
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  res.json(user);
+};
+
+export const updateProfile = async (req: any, res: Response) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { name, email, currentPassword, newPassword } = req.body;
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+
+    // Password change logic
+    if (currentPassword && newPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) return res.status(400).json({ message: "Invalid current password" });
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    // Avatar upload
+    if (req.file) {
+      const avatarUrl = `/uploads/${req.file.filename}`;
+      user.avatarUrl = avatarUrl;
+    }
+
+    await user.save();
+    res.json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
