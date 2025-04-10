@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model";
+import User from "../models/user.model";
 
 // Helper to generate JWT
 const generateToken = (id: string) => {
