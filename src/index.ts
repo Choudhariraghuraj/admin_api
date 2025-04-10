@@ -17,7 +17,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173", // for local dev
+    "https://admin-ui-wheat.vercel.app/" // replace with actual Vercel domain
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
