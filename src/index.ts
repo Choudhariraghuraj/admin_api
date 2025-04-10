@@ -19,8 +19,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors({
   origin: [
-    "http://localhost:5173", // for local dev
-    "https://admin-ui-wheat.vercel.app/" // replace with actual Vercel domain
+    "http://localhost:5173",
+    "https://admin-ui-wheat.vercel.app"
   ],
   credentials: true,
 }));
