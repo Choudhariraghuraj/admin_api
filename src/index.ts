@@ -10,7 +10,8 @@ import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
 
 dotenv.config();
-
+// ✅ Use the port from Render
+const PORT = process.env.PORT || 5001;
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -23,7 +24,7 @@ app.use("/api/users", userRoutes);
 
 mongoose.connect(process.env.MONGO_URI!).then(() => {
   console.log("✅ MongoDB connected");
-  server.listen(process.env.PORT || 5001, () => console.log("🚀 Server running on port 5001"));
+  server.listen(PORT, () => console.log("🚀 Server running on port 5001"));
 });
 
 io.on("connection", (socket) => {
