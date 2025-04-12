@@ -1,26 +1,34 @@
+import bcrypt from "bcrypt";
 import mongoose, { Document, Schema } from "mongoose";
 
-export interface UserDocument extends Document {
+// Define the User schema interface
+export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
   role: "admin" | "user";
-  avatarUrl?: string; // ✅ Add this optional field
-  createdAt: Date;
-  updatedAt: Date;
+  avatar?: string;
 }
 
-const userSchema = new Schema<UserDocument>(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "user"], default: "user" },
-    avatarUrl: { type: String }, // ✅ Optional avatar URL
-  },
-  { timestamps: true }
-);
+const userSchema = new Schema<IUser>({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["admin", "user"], required: true },
+  avatar: { type: String, default: "" },
+});
 
-const User = mongoose.model<UserDocument>("User", userSchema);
+// Hash the password before saving to the database
+userSchema.pre("save", async function (next) {
+  if (this.isModified("password")) {
+    const hashedPassword = await bcrypt.hash(this.password, 10);
+    this.password = hashedPassword;
+  }
+  next();
+});
+
+const User = mongoose.model<IUser>("User", userSchema);
 
 export default User;
+
+

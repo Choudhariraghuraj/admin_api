@@ -1,25 +1,19 @@
-import { Router } from "express";
+import express from "express";
+import upload from "../middlewares/upload.middleware";
 import {
-  getAllUsers,
-  getCurrentUser,
-  updateUser,
+  createUser,
   deleteUser,
-  getProfile,
-  updateProfile
+  getUser,
+  getUsers,
+  updateUser,
 } from "../controllers/user.controller";
-import { protect } from "../middlewares/auth.middleware";
-import { upload } from "../middlewares/upload.middleware";
 
-const router = Router();
+const router = express.Router();
 
-// All routes below this are protected
-router.use(protect);
-
-router.get("/", getAllUsers);
-router.get("/me", getCurrentUser);
-router.put("/:id", updateUser);
+router.get("/", getUsers);
+router.get("/:id", getUser);
+router.post("/", upload.single("avatar"), createUser);
+router.put("/:id", upload.single("avatar"), updateUser);
 router.delete("/:id", deleteUser);
-router.get("/me", protect, getProfile);
-router.put("/me", protect, upload.single("avatar"), updateProfile);
 
 export default router;

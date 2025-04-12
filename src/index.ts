@@ -1,5 +1,6 @@
 import "./types/express"; // extend req.user typing
 import express from "express";
+import path from "path";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -8,7 +9,6 @@ import { Server } from "socket.io";
 
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
-import path from "path";
 
 dotenv.config();
 // ✅ Use the port from Render
@@ -22,6 +22,7 @@ app.use(cors({
     "http://localhost:5173",
     "https://admin-ui-wheat.vercel.app"
   ],
+  methods: "GET, POST, PUT, DELETE",
   credentials: true,
 }));
 app.use(express.json());

@@ -1,76 +1,57 @@
 import { Request, Response } from "express";
 import User from "../models/user.model";
-import bcrypt from "bcryptjs";
+import fs from "fs";
 import path from "path";
 
-// GET /api/users
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getUsers = async (_req: Request, res: Response) => {
   const users = await User.find().select("-password");
-  res.json(users);
+  res.status(200).json({ users });
 };
 
-// GET /api/users/me
-export const getCurrentUser = async (req: Request, res: Response) => {
-  res.json(req.user); // already set by protect middleware
+export const getUser = async (req: Request, res: Response) => {
+  const user = await User.findById(req.params.id).select("-password");
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.status(200).json(user);
 };
 
-// PUT /api/users/:id
+export const createUser = async (req: Request, res: Response) => {
+  const { name, email, password, role } = req.body;
+  const avatar = req.file?.filename;
+  const existing = await User.findOne({ email });
+  if (existing) return res.status(400).json({ message: "Email already in use" });
+
+  const user = await User.create({ name, email, password, role, avatar });
+  res.status(201).json(user);
+};
+
 export const updateUser = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const updates = req.body;
-
-  const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
-
-  if (!updatedUser) return res.status(404).json({ message: "User not found" });
-
-  res.json(updatedUser);
-};
-
-// DELETE /api/users/:id
-export const deleteUser = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const deleted = await User.findByIdAndDelete(id);
-  if (!deleted) return res.status(404).json({ message: "User not found" });
-
-  res.json({ message: "User deleted" });
-};
-
-export const getProfile = async (req: any, res: Response) => {
-  const user = await User.findById(req.user.id).select("-password");
+  const { name, email, role } = req.body;
+  const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ message: "User not found" });
 
-  res.json(user);
+  user.name = name ?? user.name;
+  user.email = email ?? user.email;
+  user.role = role ?? user.role;
+
+  if (req.file?.filename) {
+    if (user.avatar) {
+      fs.unlinkSync(path.join(__dirname, `../../uploads/${user.avatar}`));
+    }
+    user.avatar = req.file.filename;
+  }
+
+  await user.save();
+  res.status(200).json(user);
 };
 
-export const updateProfile = async (req: any, res: Response) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+export const deleteUser = async (req: Request, res: Response) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { name, email, currentPassword, newPassword } = req.body;
-
-    if (name) user.name = name;
-    if (email) user.email = email;
-
-    // Password change logic
-    if (currentPassword && newPassword) {
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) return res.status(400).json({ message: "Invalid current password" });
-
-      user.password = await bcrypt.hash(newPassword, 10);
-    }
-
-    // Avatar upload
-    if (req.file) {
-      const avatarUrl = `/uploads/${req.file.filename}`;
-      user.avatarUrl = avatarUrl;
-    }
-
-    await user.save();
-    res.json({ message: "Profile updated successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+  if (user.avatar) {
+    fs.unlinkSync(path.join(__dirname, `../../uploads/${user.avatar}`));
   }
+
+  await user.deleteOne();
+  res.status(200).json({ message: "User deleted" });
 };
