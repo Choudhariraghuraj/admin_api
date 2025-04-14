@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/user.model";
-import { sendEmail } from "../utils/mailer";
 
 // Helper to generate JWT
 export const generateToken = (id: string, remember = false) => {
@@ -69,48 +68,30 @@ export const login = async (req: Request, res: Response) => {
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
 
+  // Find user by email
   const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
 
-  // Generate reset token
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  // Generate password reset token
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  
 
-  user.resetPasswordToken = hashedToken;
+  user.resetPasswordToken = resetToken;
   user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
   await user.save();
 
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+  // Construct reset password link
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-  const emailBody = `
-  <div style="background-color: #1e1e2f; padding: 30px; border-radius: 10px; color: #ffffff; font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-    <h2 style="color: #00bcd4; text-align: center;">🔐 Password Reset Request</h2>
-    <p style="font-size: 16px;">
-      Hi ${user.name || "there"},
-    </p>
-    <p style="font-size: 16px;">
-      We received a request to reset your password. Click the button below to proceed. This link is valid for 1 hour.
-    </p>
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetLink}" target="_blank"
-         style="background-color: #00bcd4; color: #1e1e2f; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px;">
-         Reset Password
-      </a>
-    </div>
-    <p style="font-size: 14px; color: #aaa;">
-      If you didn’t request this, you can safely ignore this email.
-    </p>
-    <hr style="border-color: #333; margin-top: 40px;" />
-    <p style="font-size: 12px; color: #666; text-align: center;">
-      &copy; ${new Date().getFullYear()} MyApp. All rights reserved.
-    </p>
-  </div>
-`;
-
-
-  await sendEmail(user.email, "Reset your password", emailBody);
-
-  res.json({ message: "Reset email sent successfully" });
+  // Send reset password email
+  try {
+    await sendResetPasswordEmail(user.email, resetLink, user.name);
+    res.status(200).json({ message: 'Password reset link sent to your email' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending email' });
+  }
 };
 
 // Reset Password
@@ -135,3 +116,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   res.json({ message: "Password has been reset successfully" });
 };
+function sendResetPasswordEmail(email: string, resetLink: string, name: string) {
+  throw new Error("Function not implemented.");
+}
+
