@@ -8,6 +8,8 @@ export interface IUser extends Document {
   password: string;
   role: "admin" | "user";
   avatar?: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 const userSchema = new Schema<IUser>({
@@ -16,6 +18,8 @@ const userSchema = new Schema<IUser>({
   password: { type: String, required: true },
   role: { type: String, enum: ["admin", "user"], required: true },
   avatar: { type: String, default: "" },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date }
 });
 
 // Hash the password before saving to the database
