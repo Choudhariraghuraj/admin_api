@@ -12,7 +12,7 @@ const generateToken = (id: string) => {
 
 // @route   POST /api/auth/register
 export const register = async (req: Request, res: Response) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, avatar } = req.body;
 
   const existing = await User.findOne({ email });
   if (existing) return res.status(400).json({ message: "Email already exists" });
@@ -22,7 +22,8 @@ export const register = async (req: Request, res: Response) => {
     name,
     email,
     password: hashedPassword,
-    role
+    role,
+    avatar
   });
 
   const token = generateToken(newUser._id.toString());
@@ -33,7 +34,8 @@ export const register = async (req: Request, res: Response) => {
       _id: newUser._id,
       name: newUser.name,
       email: newUser.email,
-      role: newUser.role
+      role: newUser.role,
+      avatar: newUser.avatar
     }
   });
 };
@@ -56,7 +58,8 @@ export const login = async (req: Request, res: Response) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      avatar: user.avatar
     }
   });
 };
