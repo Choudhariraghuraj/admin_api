@@ -34,8 +34,12 @@ export const updateUser = async (req: Request, res: Response) => {
   user.role = role ?? user.role;
 
   if (req.file?.filename) {
+    // Delete old avatar if exists
     if (user.avatar) {
-      fs.unlinkSync(path.join(__dirname, `../../uploads/${user.avatar}`));
+      const oldPath = path.join(__dirname, "../../uploads", user.avatar);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
     }
     user.avatar = req.file.filename;
   }
@@ -49,7 +53,10 @@ export const deleteUser = async (req: Request, res: Response) => {
   if (!user) return res.status(404).json({ message: "User not found" });
 
   if (user.avatar) {
-    fs.unlinkSync(path.join(__dirname, `../../uploads/${user.avatar}`));
+    const avatarPath = path.join(__dirname, "../../uploads", user.avatar);
+    if (fs.existsSync(avatarPath)) {
+      fs.unlinkSync(avatarPath);
+    }
   }
 
   await user.deleteOne();
