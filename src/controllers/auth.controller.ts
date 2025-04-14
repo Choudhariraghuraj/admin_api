@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/user.model";
+import { sendEmail } from "../utils/mailer";
 
 // Helper to generate JWT
 export const generateToken = (id: string, remember = false) => {
@@ -67,22 +68,49 @@ export const login = async (req: Request, res: Response) => {
 // Forgot Password
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
+
   const user = await User.findOne({ email });
   if (!user) return res.status(404).json({ message: "User not found" });
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  // Generate reset token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
   user.resetPasswordToken = hashedToken;
-  user.resetPasswordExpires = new Date(Date.now() + 1000 * 60 * 30); // 30 mins
+  user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
   await user.save();
 
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-  // TODO: Send `resetLink` to user via email (log for now)
-  console.log("Reset link:", resetLink);
+  const emailBody = `
+  <div style="background-color: #1e1e2f; padding: 30px; border-radius: 10px; color: #ffffff; font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+    <h2 style="color: #00bcd4; text-align: center;">🔐 Password Reset Request</h2>
+    <p style="font-size: 16px;">
+      Hi ${user.name || "there"},
+    </p>
+    <p style="font-size: 16px;">
+      We received a request to reset your password. Click the button below to proceed. This link is valid for 1 hour.
+    </p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetLink}" target="_blank"
+         style="background-color: #00bcd4; color: #1e1e2f; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px;">
+         Reset Password
+      </a>
+    </div>
+    <p style="font-size: 14px; color: #aaa;">
+      If you didn’t request this, you can safely ignore this email.
+    </p>
+    <hr style="border-color: #333; margin-top: 40px;" />
+    <p style="font-size: 12px; color: #666; text-align: center;">
+      &copy; ${new Date().getFullYear()} MyApp. All rights reserved.
+    </p>
+  </div>
+`;
 
-  res.json({ message: "Password reset link sent to your email" });
+
+  await sendEmail(user.email, "Reset your password", emailBody);
+
+  res.json({ message: "Reset email sent successfully" });
 };
 
 // Reset Password
