@@ -1,48 +1,30 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
+import dotenv from "dotenv";
+dotenv.config();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
-// SMTP transporter setup (using Gmail as an example)
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,  // Your email (e.g., example@gmail.com)
-    pass: process.env.EMAIL_PASS,  // Your email password or App password
-  },
-});
-
-// Function to send email
-const sendResetPasswordEmail = async (email: string, resetLink: string, userName: string) => {
-  const emailBody = `
-    <div style="background-color: #1e1e2f; padding: 30px; border-radius: 10px; color: #ffffff; font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-      <h2 style="color: #00bcd4; text-align: center;">🔐 Password Reset Request</h2>
-      <p style="font-size: 16px;">
-        Hi ${userName || "there"},
-      </p>
-      <p style="font-size: 16px;">
-        We received a request to reset your password. Click the button below to proceed. This link is valid for 1 hour.
-      </p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetLink}" target="_blank"
-           style="background-color: #00bcd4; color: #1e1e2f; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px;">
-           Reset Password
-        </a>
+export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const msg = {
+    to: email,
+    from: process.env.FROM_EMAIL!,
+    subject: 'Reset Your Password',
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333; background-color: #f7f7f7; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2a2a2a;">Password Reset Request</h2>
+        <p style="font-size: 16px;">We received a request to reset your password. Click the link below to reset it:</p>
+        <p style="font-size: 16px; margin-top: 10px; text-align: center;">
+          <a href="${resetLink}" style="background-color: #1e1e2f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Reset Password</a>
+        </p>
+        <p style="font-size: 14px; margin-top: 20px; color: #888;">If you did not request this change, please ignore this email.</p>
+        <p style="font-size: 14px; margin-top: 20px; color: #888;">&copy; ${new Date().getFullYear()} Your Company. All rights reserved.</p>
       </div>
-      <p style="font-size: 14px; color: #aaa;">
-        If you didn’t request this, you can safely ignore this email.
-      </p>
-      <hr style="border-color: #333; margin-top: 40px;" />
-      <p style="font-size: 12px; color: #666; text-align: center;">
-        &copy; ${new Date().getFullYear()} MyApp. All rights reserved.
-      </p>
-    </div>
-  `;
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,  // Sender address
-    to: email,                     // Receiver address
-    subject: 'Password Reset Request',
-    html: emailBody,               // HTML email body
+    `,
   };
 
-  // Send the email
-  await transporter.sendMail(mailOptions);
+  try {
+    await sgMail.send(msg);
+  } catch (error) {
+    console.error('Error sending email', error);
+  }
 };

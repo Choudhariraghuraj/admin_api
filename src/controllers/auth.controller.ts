@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/user.model";
+import { sendPasswordResetEmail } from "../utils/mailer";
 
 // Helper to generate JWT
 export const generateToken = (id: string, remember = false) => {
@@ -68,29 +69,27 @@ export const login = async (req: Request, res: Response) => {
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
 
-  // Find user by email
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
+  // Generate a password reset token
+  const resetToken = crypto.randomBytes(20).toString('hex');
 
-  // Generate password reset token
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  
-
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
-  await user.save();
-
-  // Construct reset password link
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-  // Send reset password email
   try {
-    await sendResetPasswordEmail(user.email, resetLink, user.name);
-    res.status(200).json({ message: 'Password reset link sent to your email' });
+    // Save the reset token and its expiration time in the database (e.g., in the User model)
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+    await user.save();
+
+    // Send password reset email
+    await sendPasswordResetEmail(email, resetToken);
+
+    return res.status(200).json({ message: 'Password reset email sent' });
   } catch (error) {
-    res.status(500).json({ message: 'Error sending email' });
+    console.error('Error handling forgot password', error);
+    return res.status(500).json({ message: 'Error sending password reset email' });
   }
 };
 
@@ -116,7 +115,4 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   res.json({ message: "Password has been reset successfully" });
 };
-function sendResetPasswordEmail(email: string, resetLink: string, name: string) {
-  throw new Error("Function not implemented.");
-}
 
