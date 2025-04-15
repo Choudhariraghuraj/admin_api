@@ -68,28 +68,26 @@ export const login = async (req: Request, res: Response) => {
 // Forgot Password
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
-
-  // Generate a password reset token
-  const resetToken = crypto.randomBytes(20).toString('hex');
+  const resetToken = crypto.randomBytes(20).toString("hex");
 
   try {
-    // Save the reset token and its expiration time in the database (e.g., in the User model)
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.resetPasswordToken = resetToken;
+    // 🔐 Hash token before saving
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
 
-    // Send password reset email
+    // ⛓️ Send raw token (not hashed) in email link
     await sendPasswordResetEmail(email, resetToken);
 
-    return res.status(200).json({ message: 'Password reset email sent' });
+    return res.status(200).json({ message: "Password reset email sent" });
   } catch (error) {
-    console.error('Error handling forgot password', error);
-    return res.status(500).json({ message: 'Error sending password reset email' });
+    console.error("Error handling forgot password", error);
+    return res.status(500).json({ message: "Error sending password reset email" });
   }
 };
 
