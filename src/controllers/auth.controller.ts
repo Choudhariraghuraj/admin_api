@@ -5,26 +5,28 @@ import crypto from "crypto";
 import User from "../models/user.model";
 import { sendPasswordResetEmail } from "../utils/mailer";
 
-// Helper to generate JWT
+// 🔐 Generate JWT
 export const generateToken = (id: string, remember = false) => {
   return jwt.sign({ id }, process.env.JWT_SECRET!, {
-    expiresIn: remember ? "30d" : "1d", // Longer if "remember me" is checked
+    expiresIn: remember ? "30d" : "1d",
   });
 };
 
-// @route   POST /api/auth/register
+// ✅ Register
 export const register = async (req: Request, res: Response) => {
   const { name, email, password, role = "user", avatar } = req.body;
 
   const existing = await User.findOne({ email });
   if (existing) return res.status(400).json({ message: "Email already exists" });
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const newUser = await User.create({
     name,
     email,
-    password,
+    password: hashedPassword,
     role,
-    avatar
+    avatar,
   });
 
   const token = generateToken(newUser._id.toString());
@@ -36,12 +38,12 @@ export const register = async (req: Request, res: Response) => {
       name: newUser.name,
       email: newUser.email,
       role: newUser.role,
-      avatar: newUser.avatar
-    }
+      avatar: newUser.avatar,
+    },
   });
 };
 
-// @route   POST /api/auth/login
+// ✅ Login
 export const login = async (req: Request, res: Response) => {
   const { email, password, remember } = req.body;
 
@@ -65,33 +67,31 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 
-// Forgot Password
+// ✅ Forgot Password
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
-  const resetToken = crypto.randomBytes(20).toString("hex");
 
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // 🔐 Hash token before saving
+    const resetToken = crypto.randomBytes(20).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
 
-    // ⛓️ Send raw token (not hashed) in email link
     await sendPasswordResetEmail(email, resetToken);
 
-    return res.status(200).json({ message: "Password reset email sent" });
+    res.status(200).json({ message: "Password reset email sent" });
   } catch (error) {
-    console.error("Error handling forgot password", error);
-    return res.status(500).json({ message: "Error sending password reset email" });
+    console.error("Error in forgotPassword:", error);
+    res.status(500).json({ message: "Error sending password reset email" });
   }
 };
 
-// Reset Password
+// ✅ Reset Password
 export const resetPassword = async (req: Request, res: Response) => {
   const { token } = req.params;
   const { password } = req.body;
@@ -108,9 +108,7 @@ export const resetPassword = async (req: Request, res: Response) => {
   user.password = await bcrypt.hash(password, 10);
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
-
   await user.save();
 
   res.json({ message: "Password has been reset successfully" });
 };
-
