@@ -9,6 +9,7 @@ import { Server } from "socket.io";
 
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 
 dotenv.config();
 // ✅ Use the port from Render
@@ -29,6 +30,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/dashboard", dashboardRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 mongoose.connect(process.env.MONGO_URI!).then(() => {
