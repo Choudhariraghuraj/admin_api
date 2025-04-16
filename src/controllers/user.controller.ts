@@ -62,3 +62,45 @@ export const deleteUser = async (req: Request, res: Response) => {
   await user.deleteOne();
   res.status(200).json({ message: "User deleted" });
 };
+
+export const getMe = async (req: Request, res: Response) => {
+  const user = await User.findById(req.user?._id).select("-password");
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.status(200).json(user);
+};
+
+export const updateMe = async (req: Request, res: Response) => {
+  const { name, email, currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user?._id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  if (email && email !== user.email) {
+    const emailExists = await User.findOne({ email });
+    if (emailExists && emailExists._id.toString() !== user._id.toString()) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+    user.email = email;
+  }
+
+  user.name = name ?? user.name;
+
+  if (currentPassword && newPassword) {
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+    user.password = newPassword;
+  }
+
+  if (req.file?.filename) {
+    // Delete old avatar if exists
+    if (user.avatar) {
+      const oldPath = path.join(__dirname, "../../uploads", user.avatar);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+    user.avatar = req.file.filename;
+  }
+
+  await user.save();
+  res.status(200).json({ message: "Profile updated successfully" });
+};
