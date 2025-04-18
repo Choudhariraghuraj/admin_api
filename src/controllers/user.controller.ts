@@ -3,9 +3,51 @@ import User from "../models/user.model";
 import fs from "fs";
 import path from "path";
 
-export const getUsers = async (_req: Request, res: Response) => {
-  const users = await User.find().select("-password");
-  res.status(200).json({ users });
+// ✅ Get users with pagination, search, role filter, and date range
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 10, search = "", role, startDate, endDate } = req.query;
+
+    const query: any = {};
+
+    // Search by name or email (case-insensitive)
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Role filter
+    if (role) query.role = role;
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate as string);
+      if (endDate) query.createdAt.$lte = new Date(endDate as string);
+    }
+
+    const skip = (+page - 1) * +limit;
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select("-password")
+        .skip(skip)
+        .limit(+limit)
+        .sort({ createdAt: -1 }),
+      User.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+      users,
+      total,
+      page: +page,
+      totalPages: Math.ceil(total / +limit),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch users", error });
+  }
 };
 
 export const getUser = async (req: Request, res: Response) => {
